@@ -10,6 +10,7 @@ use FFI\CData;
 final class Ipriv
 {
     private const ENGINE = 0;
+    private const MAX_OVERHEAD = 4096;
 
     private static $ffi = null;
 
@@ -116,8 +117,11 @@ final class Ipriv
             $this->init();
             $key = $this->openSecret();
 
-            $out = self::$ffi->new('char[2048]');
-            $length = self::$ffi->Crypt_Sign($string, -1, $out, 2048, FFI::addr($key));
+            $contentLength = strlen($string);
+            $bytes = $contentLength + self::MAX_OVERHEAD;
+
+            $out = self::$ffi->new('char['.$bytes.']');
+            $length = self::$ffi->Crypt_Sign($string, -1, $out, $bytes, FFI::addr($key));
             if ($length <= 0) {
                 throw new IprivException('Не удалось создать подпись', $length);
             }
@@ -164,8 +168,8 @@ final class Ipriv
         try {
             $this->init();
             $key = $this->openPublic();
-            $out = self::$ffi->new('char[2048]');
-            $length = self::$ffi->Crypt_Encrypt($string, -1, $out, 2048, FFI::addr($key));
+            $out = self::$ffi->new('char[1024]');
+            $length = self::$ffi->Crypt_Encrypt($string, -1, $out, 1024, FFI::addr($key));
             if ($length <= 0) {
                 throw new IprivException('Не удалось зашифровать сообщение', $length);
             }
@@ -187,8 +191,8 @@ final class Ipriv
         try {
             $this->init();
             $key = $this->openSecret();
-            $out = self::$ffi->new('char[2048]');
-            $length = self::$ffi->Crypt_Decrypt($string, -1, $out, 2048, FFI::addr($key));
+            $out = self::$ffi->new('char[1024]');
+            $length = self::$ffi->Crypt_Decrypt($string, -1, $out, 1024, FFI::addr($key));
             if ($length <= 0) {
                 throw new IprivException('Не удалось расшифровать сообщение', $length);
             }

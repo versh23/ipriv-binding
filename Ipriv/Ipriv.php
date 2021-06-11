@@ -40,7 +40,7 @@ final class Ipriv
                 int Crypt_CloseKey(IPRIV_KEY* key);
                 int Crypt_Done(void);
                 int Crypt_OpenPublicKey(int eng, const char* src, int nsrc, unsigned long keyserial, IPRIV_KEY* key, int cakey);
-                int Crypt_Verify(const char* src, int nsrc, int pdst, int pndst, IPRIV_KEY* key);
+                int Crypt_Verify(const char* src, int nsrc, const char** pdst, int* pndst, IPRIV_KEY* key);
                 int Crypt_Encrypt(const char* src, int nsrc, char* dst, int ndst, IPRIV_KEY* key);
                 int Crypt_Decrypt(const char* src, int nsrc, char* dst, int ndst, IPRIV_KEY* key);
         ', $libraryPath);
@@ -117,7 +117,7 @@ final class Ipriv
             $this->init();
             $key = $this->openSecret();
 
-            $contentLength = strlen($string);
+            $contentLength = \strlen($string);
             $bytes = $contentLength + self::MAX_OVERHEAD;
 
             $out = self::$ffi->new('char['.$bytes.']');
@@ -140,21 +140,29 @@ final class Ipriv
     /**
      * @throws IprivException
      */
-    public function verify(string $string): bool
+    public function verify(string $string): array
     {
         try {
             $valid = true;
 
             $this->init();
             $key = $this->openPublic();
-            $code = self::$ffi->Crypt_Verify($string, -1, 0, 0, FFI::addr($key));
+
+            $out = FFI::addr(self::$ffi->new('char'));
+            $outLen = self::$ffi->new('int');
+
+            $code = self::$ffi->Crypt_Verify($string, -1, FFI::addr($out), FFI::addr($outLen), FFI::addr($key));
+
             if (0 !== $code) {
-                $valid = false;
+                return ['valid' => false, 'original' => null];
             }
+
+            $original = FFI::string($out, $outLen->cdata);
+
             $this->closeKey($key);
             $this->destroy();
 
-            return $valid;
+            return ['valid' => $valid, 'original' => $original];
         } catch (\Throwable $exception) {
             throw new IprivException('Невозможно проверить подпись', previous: $exception);
         }

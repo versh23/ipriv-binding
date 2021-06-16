@@ -148,7 +148,8 @@ final class Ipriv
             $this->init();
             $key = $this->openPublic();
 
-            $out = FFI::addr(self::$ffi->new('char'));
+            $outChar = self::$ffi->new('char');
+            $out = FFI::addr($outChar);
             $outLen = self::$ffi->new('int');
 
             $code = self::$ffi->Crypt_Verify($string, -1, FFI::addr($out), FFI::addr($outLen), FFI::addr($key));
